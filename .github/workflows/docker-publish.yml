@@ -8,7 +8,6 @@ on:
 
 env:
   REGISTRY: docker.io
-  # 从 GitHub 仓库名中提取用户名和仓库名
   DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
   REPO_NAME: ${{ github.event.repository.name }}
   IMAGE_NAME: ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USER }}/${{ github.event.repository.name }}
@@ -37,7 +36,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ env.IMAGE_NAME }}
+          # 修正：使用完整的 ${{ env.VARIABLE }} 语法
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USER }}/${{ github.event.repository.name }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
