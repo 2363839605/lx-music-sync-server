@@ -9,23 +9,32 @@ const fs = require('fs')
 const path = require('path')
 const tmpPath = require('os').tmpdir()
 const { cookieToJson, cookieObjToString, toBoolean } = require('./index')
-const anonymous_token = fs.readFileSync(
-  path.resolve(tmpPath, './anonymous_token'),
-  'utf-8',
-)
 const { URLSearchParams, URL } = require('url')
 const { APP_CONF } = require('../util/config.json')
-// request.debug = true // 开启可看到更详细信息
 
-const WNMCID = (function () {
-  const characters = 'abcdefghijklmnopqrstuvwxyz'
-  let randomString = ''
-  for (let i = 0; i < 6; i++)
-    randomString += characters.charAt(
-      Math.floor(Math.random() * characters.length),
-    )
-  return `${randomString}.${Date.now().toString()}.01.0`
-})()
+// 生成默认的匿名令牌
+const generateAnonymousToken = () => {
+  return CryptoJS.lib.WordArray.random(32).toString()
+}
+
+// 尝试读取或创建 anonymous_token
+let anonymous_token
+const tokenPath = path.resolve(tmpPath, './anonymous_token')
+try {
+  anonymous_token = fs.readFileSync(tokenPath, 'utf-8')
+} catch (err) {
+  if (err.code === 'ENOENT') {
+    anonymous_token = generateAnonymousToken()
+    try {
+      fs.writeFileSync(tokenPath, anonymous_token, 'utf-8')
+    } catch (writeErr) {
+      console.warn('Failed to write anonymous_token file:', writeErr)
+    }
+  } else {
+    console.warn('Failed to read anonymous_token file:', err)
+    anonymous_token = generateAnonymousToken()
+  }
+}
 
 const osMap = {
   pc: {
@@ -72,6 +81,17 @@ const chooseUserAgent = (crypto, uaType = 'pc') => {
   }
   return userAgentMap[crypto][uaType] || ''
 }
+
+const WNMCID = (function () {
+  const characters = 'abcdefghijklmnopqrstuvwxyz'
+  let randomString = ''
+  for (let i = 0; i < 6; i++)
+    randomString += characters.charAt(
+      Math.floor(Math.random() * characters.length),
+    )
+  return `${randomString}.${Date.now().toString()}.01.0`
+})()
+
 const createRequest = (uri, data, options) => {
   return new Promise((resolve, reject) => {
     let headers = options.headers || {}

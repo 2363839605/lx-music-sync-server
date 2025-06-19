@@ -28,9 +28,14 @@ RUN mkdir build-output \
 FROM base AS final
 WORKDIR /server
 
-RUN apk add --update --no-cache nodejs
+RUN apk add --update --no-cache nodejs curl
 
 COPY --from=builder ./source-code/build-output ./
+
+# 创建必要的目录和文件
+RUN mkdir -p /tmp \
+    && echo "ANONYMOUS_TOKEN" > /tmp/anonymous_token \
+    && chmod 644 /tmp/anonymous_token
 
 VOLUME /server/data
 ENV DATA_PATH '/server/data/data'
@@ -49,5 +54,9 @@ ENV BIND_IP '0.0.0.0'
 # ENV CONFIG_PATH '/server/config.js'
 # ENV LOG_PATH '/server/logs'
 # ENV DATA_PATH '/server/data'
+
+# 添加健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:9527/hello || exit 1
 
 CMD [ "node", "index.js" ]
