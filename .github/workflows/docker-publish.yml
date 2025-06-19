@@ -10,7 +10,7 @@ env:
   REGISTRY: docker.io
   DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
   REPO_NAME: ${{ github.event.repository.name }}
-  IMAGE_NAME: ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USER }}/${{ github.event.repository.name }}
+  IMAGE_NAME: ${{ secrets.DOCKER_HUB_USER }}/${{ github.event.repository.name }}
 
 jobs:
   Linux:
@@ -36,8 +36,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          # 修正：使用完整的 ${{ env.VARIABLE }} 语法
-          images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_HUB_USER }}/${{ github.event.repository.name }}
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
