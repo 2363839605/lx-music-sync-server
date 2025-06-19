@@ -7,6 +7,7 @@ import { accessLog, startupLog, syncLog } from '@/utils/log4js'
 import { SYNC_CLOSE_CODE, SYNC_CODE } from '@/constants'
 import { getUserSpace, releaseUserSpace, getUserName, getServerId } from '@/user'
 import { createMsg2call } from 'message2call'
+import express from 'express'
 
 
 let status: LX.Sync.Status = {
@@ -125,33 +126,29 @@ function onSocketError(err: Error) {
   console.error(err)
 }
 
-const handleStartServer = async(port = 9527, ip = '127.0.0.1') => await new Promise((resolve, reject) => {
-  const httpServer = http.createServer((req, res) => {
-    // console.log(req.url)
-    const endUrl = `/${req.url?.split('/').at(-1) ?? ''}`
-    let code
-    let msg
-    switch (endUrl) {
-      case '/hello':
-        code = 200
-        msg = SYNC_CODE.helloMsg
-        break
-      case '/id':
-        code = 200
-        msg = SYNC_CODE.idPrefix + getServerId()
-        break
-      case '/ah':
-        void authCode(req, res, lx.config.users)
-        break
-      default:
-        code = 401
-        msg = 'Forbidden'
-        break
-    }
-    if (!code) return
-    res.writeHead(code)
-    res.end(msg)
-  })
+const handleStartServer = async(port = 9527, ip = '127.0.0.1') => await new Promise(async (resolve, reject) => {
+  // 只创建 httpServer，不再自定义 HTTP 路由
+  const httpServer = http.createServer();
+
+  // 新增：集成 NeteaseCloudMusicApi
+  const expressApp = express();
+  const { serveNcmApi } = require('../../NeteaseCloudMusicApi/server.js');
+  const ncmApiApp = await serveNcmApi({ checkVersion: false });
+  expressApp.use('/api/netease', ncmApiApp);
+
+  // 迁移主项目原有 HTTP 路由
+  expressApp.get('/hello', (req, res) => {
+    res.send(SYNC_CODE.helloMsg);
+  });
+  expressApp.get('/id', (req, res) => {
+    res.send(SYNC_CODE.idPrefix + getServerId());
+  });
+  expressApp.get('/ah', (req, res) => {
+    authCode(req, res, global.lx.config.users);
+  });
+
+  // 让 express 处理所有 http 请求
+  httpServer.on('request', expressApp);
 
   wss = new WebSocketServer({
     noServer: true,
