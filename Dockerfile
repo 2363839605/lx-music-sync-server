@@ -9,11 +9,20 @@ RUN apk add --update \
     make \
     py3-pip \
     nodejs \
-    npm \
-  && npm ci && npm run build \
-  && rm -rf node_modules && npm ci --omit=dev \
-  && mkdir build-output \
-  && mv server node_modules config.js index.js package.json -t build-output
+    npm
+
+# 安装主项目依赖并构建
+RUN npm ci && npm run build
+
+# 安装 NeteaseCloudMusicApi 依赖
+RUN cd NeteaseCloudMusicApi && npm ci && cd ..
+
+# 重新安装主项目生产依赖
+RUN rm -rf node_modules && npm ci --omit=dev
+
+# 准备构建输出
+RUN mkdir build-output \
+  && mv server node_modules config.js index.js package.json NeteaseCloudMusicApi -t build-output
 
 
 FROM base AS final
